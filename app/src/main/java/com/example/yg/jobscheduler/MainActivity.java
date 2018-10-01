@@ -19,10 +19,13 @@ import android.view.View;
 
 import java.util.List;
 
+import static com.example.yg.jobscheduler.PhotosContentJob.MEDIA_URI;
+
 public class MainActivity extends AppCompatActivity {
 
     public static String packageName;
-    static final int PHOTOS_CONTENT_JOB = 10086;
+    static final int PHOTOS_CONTENT_JOB = 1086;
+    static final int BOOT_JOB_ID = 1087;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,30 +44,68 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 
                 //debug purpose
-                cancelJob();
-                
-                //call only greater than api 24
-                if(android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isScheduled()){
-                    
-                    JobScheduler mJobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
-                    ComponentName name = new ComponentName(MainActivity.packageName,PhotosContentJob.class.getName());
-                    JobInfo.Builder jobInfoBuilder = new JobInfo.Builder(PHOTOS_CONTENT_JOB, name);
-                    jobInfoBuilder.addTriggerContentUri(new JobInfo.TriggerContentUri(
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
-    
-                    JobInfo jobInfo = jobInfoBuilder.build();
-                    if (mJobScheduler != null) {
-                        int result = mJobScheduler.schedule(jobInfo);
-                        if (result == JobScheduler.RESULT_SUCCESS) {
-                            Log.d("yuan", "CameraUploadsService: Job scheduled SUCCESS");
-                        } else {
-                            Log.d("yuan", "CameraUploadsService: Job scheduled FAILED");
-                        }
-                    }
-                }
+                //cancelJob();
+                scheduleCameraJob();
+                scheduleBootJob();
             }
         });
+    }
+    
+    private void scheduleCameraJob(){
+        if( android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isScheduled(PHOTOS_CONTENT_JOB)){
+        
+            final JobScheduler mJobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        
+            ComponentName name = new ComponentName(MainActivity.packageName, CameraSyncService.class.getName());
+        
+            JobInfo.Builder jobInfoBuilder = new JobInfo.Builder(PHOTOS_CONTENT_JOB, name);
+            jobInfoBuilder.addTriggerContentUri(new JobInfo.TriggerContentUri(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+            jobInfoBuilder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI,0));
+        
+            final JobInfo jobInfo = jobInfoBuilder.build();
+        
+            Thread t = new Thread(){
+                @Override
+                public void run() {
+                    int result = mJobScheduler.schedule(jobInfo);
+                
+                    logJobState(result);
+                }
+            };
+            t.start();
+        }
+    }
+    
+    public void scheduleBootJob(){
+        if( android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !isScheduled(BOOT_JOB_ID)){
+    
+            final JobScheduler mJobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            ComponentName name = new ComponentName(MainActivity.packageName, BootJobService.class.getName());
+            JobInfo.Builder jobInfoBuilder = new JobInfo.Builder(BOOT_JOB_ID, name);
+            jobInfoBuilder.setPersisted(true);
+            jobInfoBuilder.setPeriodic(1000000);
+    
+            final JobInfo jobInfo2 = jobInfoBuilder.build();
+        
+            Thread t = new Thread(){
+                @Override
+                public void run() {
+                    int result = mJobScheduler.schedule(jobInfo2);
+                    logJobState(result);
+                }
+            };
+            t.start();
+        }
+    }
+    
+    public static void logJobState(int result){
+        if (result == JobScheduler.RESULT_SUCCESS) {
+            Log.d("yuan1","JOB SCHEDULED!");
+        }else{
+            Log.d("yuan1","FAILED TO SCHEDULE!");
+        }
     }
     
     // Cancel this job, if currently scheduled.
@@ -74,14 +115,14 @@ public class MainActivity extends AppCompatActivity {
     }
     
     // Check whether this job is currently scheduled.
-    private boolean isScheduled() {
+    private boolean isScheduled(int id) {
         JobScheduler js = getSystemService(JobScheduler.class);
         List<JobInfo> jobs = js.getAllPendingJobs();
         if (jobs == null) {
             return false;
         }
         for (int i = 0;i < jobs.size();i++) {
-            if (jobs.get(i).getId() == 1) {
+            if (jobs.get(i).getId() == id) {
                 return true;
             }
         }
@@ -108,5 +149,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+    
+    public static void log(String message){
+        Log.d("Yuan", message);
     }
 }

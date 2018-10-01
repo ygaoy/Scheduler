@@ -10,27 +10,36 @@ import android.app.job.JobService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Environment;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Date;
+
+import static com.example.yg.jobscheduler.MainActivity.log;
 
 @TargetApi(Build.VERSION_CODES.N) //api 24
 public class CameraSyncService extends JobService {
     
     private int notificationId = 10086;
-    private int notificationIdFinal = 10087;
     private String notificationChannelId = "10088";
     private String notificationChannelName = "Notification";
     
     @Override
     public boolean onStartJob(final JobParameters params) {
+        
         Thread task = new Thread() {
             @Override
             public void run() {
                 
                 startForeground(notificationId,createNotification());
                 for (int i = 0;i < 10;i++) {
-                    Log.d("yuan","i is: " + i);
-                    //appendLog(i + "");
+                    log("i is: " + i);
+                    appendLog(i + "");
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
@@ -89,5 +98,27 @@ public class CameraSyncService extends JobService {
         }
         
         return notification;
+    }
+    
+    public void appendLog(String message) {
+        
+        File logFile = new File(Environment.getExternalStorageDirectory() + "/TestLog.txt");
+        
+        if (!logFile.exists()) {
+            try {
+                logFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile,true));
+            Date date = new Date();
+            buf.append("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + " " + message + " \n"));
+            buf.newLine();
+            buf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

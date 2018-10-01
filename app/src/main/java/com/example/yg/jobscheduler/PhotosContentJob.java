@@ -30,7 +30,7 @@ public class PhotosContentJob extends JobService {
     // The root URI of the media provider, to monitor for generic changes to its content.
     static final Uri MEDIA_URI = Uri.parse("content://" + MediaStore.AUTHORITY + "/");
     
-    static final int PHOTOS_CONTENT_JOB = 10086;
+    static final int PHOTOS_CONTENT_JOB = 1086;
     static int count = 0;
     
     public static Context mContext;
@@ -104,6 +104,34 @@ public class PhotosContentJob extends JobService {
     }
     
     @Override
+    public boolean onStopJob(JobParameters params) {
+        Log.d("PhotosContentJob","job stopped");
+        return true;
+    }
+    
+    public void appendLog(String message) {
+        
+        File logFile = new File(Environment.getExternalStorageDirectory() + "/TestLog.txt");
+        
+        if (!logFile.exists()) {
+            try {
+                logFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile,true));
+            Date date = new Date();
+            buf.append("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + " " + message + " \n"));
+            buf.newLine();
+            buf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @Override
     public boolean onStartJob(final JobParameters params) {
         Log.d("PhotosContentJob","JOB STARTED!");
         count++;
@@ -131,31 +159,5 @@ public class PhotosContentJob extends JobService {
         return true;
     }
     
-    @Override
-    public boolean onStopJob(JobParameters params) {
-        Log.d("PhotosContentJob","job stopped");
-        return true;
-    }
-    
-    public void appendLog(String message) {
-        
-        File logFile = new File(Environment.getExternalStorageDirectory() + "/TestLog.txt");
-        
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        try {
-            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile,true));
-            Date date = new Date();
-            buf.append("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + " " + message + " \n"));
-            buf.newLine();
-            buf.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+   
 }
